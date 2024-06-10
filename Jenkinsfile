@@ -6,7 +6,6 @@ pipeline {
         DOCKER_IMAGE_TAG = 'latest' 
         CONTAINER_NAME = 'netflix-app-container'
         REPO_URL = 'https://github.com/mazenger/Netflix.git'
-        BRANCH_NAME = 'main' // Specify the branch name
         REMOTE_HOST = '18.171.149.13'
         SSH_CREDENTIALS_ID = 'ec2-user1' // The ID of the SSH credentials in Jenkins
         REMOTE_USER = 'ec2-user' // The username for your remote host
@@ -15,7 +14,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git url: "${env.REPO_URL}", branch: "${env.BRANCH_NAME}"
+                git url: "${env.REPO_URL}", branch: 'main'
             }
         }
 
@@ -25,6 +24,18 @@ pipeline {
                     sshagent (credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
                         sh """
                         ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} 'docker pull ${env.DOCKER_HUB_REPO}:${env.DOCKER_IMAGE_TAG}'
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Stop Existing Docker Container on Remote Host') {
+            steps {
+                script {
+                    sshagent (credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
+                        sh """
+                        ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} 'docker stop ${env.CONTAINER_NAME} || true && docker rm ${env.CONTAINER_NAME} || true'
                         """
                     }
                 }
