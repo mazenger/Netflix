@@ -6,6 +6,7 @@ pipeline {
         DOCKER_IMAGE_TAG = 'latest' 
         CONTAINER_NAME = 'netflix-app-container'
         REPO_URL = 'https://github.com/mazenger/Netflix.git'
+        BRANCH_NAME = 'main' // Specify the branch name
         REMOTE_HOST = '18.171.149.13'
         SSH_CREDENTIALS_ID = 'ec2-user' // The ID of the SSH credentials in Jenkins
         REMOTE_USER = 'ec2-user' // The username for your remote host
@@ -14,7 +15,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git url: "${env.REPO_URL}"
+                git url: "${env.REPO_URL}", branch: "${env.BRANCH_NAME}"
             }
         }
 
