@@ -6,6 +6,9 @@ pipeline {
         DOCKER_IMAGE_TAG = 'latest' 
         CONTAINER_NAME = 'netflix-app-container'
         REPO_URL = 'https://github.com/mazenger/Netflix.git'
+        REMOTE_HOST = '18.171.149.13'
+        SSH_CREDENTIALS_ID = 'ec2-user' // The ID of the SSH credentials in Jenkins
+        REMOTE_USER = 'ec2-user' // The username for your remote host
     }
 
     stages {
@@ -15,18 +18,26 @@ pipeline {
             }
         }
 
-        stage('Pull Docker Image') {
+        stage('Pull Docker Image on Remote Host') {
             steps {
                 script {
-                    sh "docker pull ${env.DOCKER_HUB_REPO}:${env.DOCKER_IMAGE_TAG}"
+                    sshagent (credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
+                        sh """
+                        ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} 'docker pull ${env.DOCKER_HUB_REPO}:${env.DOCKER_IMAGE_TAG}'
+                        """
+                    }
                 }
             }
         }
 
-        stage('Run Docker Container') {
+        stage('Run Docker Container on Remote Host') {
             steps {
                 script {
-                    sh "docker run -d --name ${env.CONTAINER_NAME} -p 3000:3000 ${env.DOCKER_HUB_REPO}:${env.DOCKER_IMAGE_TAG}"
+                    sshagent (credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
+                        sh """
+                        ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} 'docker run -d --name ${env.CONTAINER_NAME} -p 3000:3000 ${env.DOCKER_HUB_REPO}:${env.DOCKER_IMAGE_TAG}'
+                        """
+                    }
                 }
             }
         }
@@ -35,12 +46,13 @@ pipeline {
             steps {
                 script {
                     sleep 10
-                    
-                    sh "curl http://localhost:3000"
+                    sshagent (credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
+                        sh """
+                        ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} 'curl http://localhost:3000'
+                        """
+                    }
                 }
             }
         }
     }
-
-
 }
