@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_HUB_REPO = 'mazaconda/netflix-app'
-        DOCKER_IMAGE_TAG = 'latest' 
+        DOCKER_IMAGE_TAG = 'latest'
         CONTAINER_NAME = 'netflix-app-container'
         REPO_URL = 'https://github.com/mazenger/Netflix.git'
         REMOTE_HOST = '18.171.149.13'
@@ -21,7 +21,7 @@ pipeline {
         stage('Pull Docker Image on Remote Host') {
             steps {
                 script {
-                    sshagent (credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
+                    sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
                         sh """
                         ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} 'docker pull ${env.DOCKER_HUB_REPO}:${env.DOCKER_IMAGE_TAG}'
                         """
@@ -30,27 +30,13 @@ pipeline {
             }
         }
 
-        stage('Stop Existing Docker Container on Remote Host') {
+        stage('Stop and Remove All Docker Containers on Remote Host') {
             steps {
                 script {
-                    sshagent (credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
+                    sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
                         sh """
                         ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} '
-                        docker stop ${env.CONTAINER_NAME} || true && docker rm ${env.CONTAINER_NAME} || true
-                        '
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Free Up Port 3000 on Remote Host') {
-            steps {
-                script {
-                    sshagent (credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
-                        sh """
-                        ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} '
-                        lsof -i tcp:3000 | grep LISTEN | awk "{print \\\$2}" | xargs -r kill -9 || true
+                        docker stop $(docker ps -aq) || true && docker rm $(docker ps -aq) || true
                         '
                         """
                     }
@@ -61,7 +47,7 @@ pipeline {
         stage('Run Docker Container on Remote Host') {
             steps {
                 script {
-                    sshagent (credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
+                    sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
                         sh """
                         ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} '
                         docker run -d --name ${env.CONTAINER_NAME} -p 3000:3000 ${env.DOCKER_HUB_REPO}:${env.DOCKER_IMAGE_TAG}
@@ -76,7 +62,7 @@ pipeline {
             steps {
                 script {
                     sleep 10
-                    sshagent (credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
+                    sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
                         sh """
                         ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} '
                         curl http://localhost:3000
