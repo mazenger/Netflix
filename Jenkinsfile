@@ -50,7 +50,7 @@ pipeline {
                     sshagent (credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
                         sh """
                         ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} '
-                        fuser -k 3000/tcp || true
+                        lsof -i tcp:3000 | grep LISTEN | awk "{print \\$2}" | xargs kill -9 || true
                         '
                         """
                     }
