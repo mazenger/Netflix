@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_HUB_REPO = 'mazaconda/netflix-app'
-        DOCKER_IMAGE_TAG = 'latest'
+        DOCKER_IMAGE_TAG = 'latest' 
         CONTAINER_NAME = 'netflix-app-container'
         REPO_URL = 'https://github.com/mazenger/Netflix.git'
         REMOTE_HOST = '18.171.149.13'
@@ -50,7 +50,7 @@ pipeline {
                     sshagent (credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
                         sh """
                         ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} '
-                        lsof -i tcp:3000 | grep LISTEN | awk "{print \\\$2}" | xargs kill -9 || true
+                        lsof -i tcp:3000 | grep LISTEN | awk "{print \\\$2}" | xargs -r kill -9 || true
                         '
                         """
                     }
