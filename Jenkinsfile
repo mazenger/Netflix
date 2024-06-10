@@ -35,7 +35,23 @@ pipeline {
                 script {
                     sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
                         sh """
-                        ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} "docker stop \$(docker ps -aq) || true && docker rm \$(docker ps -aq) || true"
+                        ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} "
+                        docker stop \$(docker ps -aq) || true && docker rm \$(docker ps -aq) || true
+                        "
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Remove Existing Container with Same Name on Remote Host') {
+            steps {
+                script {
+                    sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
+                        sh """
+                        ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} "
+                        docker rm -f ${env.CONTAINER_NAME} || true
+                        "
                         """
                     }
                 }
@@ -47,7 +63,9 @@ pipeline {
                 script {
                     sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
                         sh """
-                        ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} "docker run -d --name ${env.CONTAINER_NAME} -p 3000:3000 ${env.DOCKER_HUB_REPO}:${env.DOCKER_IMAGE_TAG}"
+                        ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} "
+                        docker run -d --name ${env.CONTAINER_NAME} -p 3000:3000 ${env.DOCKER_HUB_REPO}:${env.DOCKER_IMAGE_TAG}
+                        "
                         """
                     }
                 }
@@ -60,7 +78,9 @@ pipeline {
                     sleep 10
                     sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
                         sh """
-                        ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} "curl http://localhost:3000"
+                        ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} "
+                        curl http://localhost:3000
+                        "
                         """
                     }
                 }
