@@ -2,89 +2,78 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_HUB_REPO = 'mazaconda/netflix-app'
-        DOCKER_IMAGE_TAG = 'latest'
-        CONTAINER_NAME = 'netflix-app-container'
-        REPO_URL = 'https://github.com/mazenger/Netflix.git'
-        REMOTE_HOST = '18.171.149.13'
-        SSH_CREDENTIALS_ID = 'ec2-user1' // The ID of the SSH credentials in Jenkins
-        REMOTE_USER = 'ec2-user' // The username for your remote host
+        DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials-id')
+        REMOTE_HOST = 'your-remote-host'
+        REMOTE_USER = 'your-remote-user'
+        REMOTE_KEY = 'your-ssh-key-path'
     }
 
     stages {
-        stage('Clone Repository') {
+        stage('Checkout') {
             steps {
-                git url: "${env.REPO_URL}", branch: 'main'
+                git 'https://github.com/mazenger/Netflix.git'
             }
         }
 
-        stage('Pull Docker Image on Remote Host') {
+        stage('Build Docker Image') {
             steps {
                 script {
-                    sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
-                        sh """
-                        ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} "docker pull ${env.DOCKER_HUB_REPO}:${env.DOCKER_IMAGE_TAG}"
-                        """
+                    docker.build("mazaconda/netflix-app:latest")
+                }
+            }
+        }
+
+        stage('Push Docker Image') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'DOCKERHUB_CREDENTIALS') {
+                        docker.image("mazaconda/netflix-app:latest").push()
                     }
                 }
             }
         }
 
-        stage('Stop and Remove All Docker Containers on Remote Host') {
+        stage('Deploy to Remote Host') {
             steps {
-                script {
-                    sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
-                        sh """
-                        ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} "
-                        docker stop \$(docker ps -aq) || true && docker rm \$(docker ps -aq) || true
-                        "
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Remove Existing Container with Same Name on Remote Host') {
-            steps {
-                script {
-                    sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
-                        sh """
-                        ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} "
-                        docker rm -f ${env.CONTAINER_NAME} || true
-                        "
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Run Docker Container on Remote Host') {
-            steps {
-                script {
-                    sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
-                        sh """
-                        ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} "
-                        docker run -d --name ${env.CONTAINER_NAME} -p 3000:3000 ${env.DOCKER_HUB_REPO}:${env.DOCKER_IMAGE_TAG}
-                        "
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('Access Application') {
-            steps {
-                script {
+                sshagent (credentials: ['your-ssh-credentials-id']) {
+                    sh """
+                    ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} << EOF
+                    docker pull mazaconda/netflix-app:latest
+                    docker stop netflix-app-container || true
+                    docker rm netflix-app-container || true
+                    docker run -d --name netflix-app-container -p 3000:3000 mazaconda/netflix-app:latest
                     sleep 10
-                    sshagent(credentials: ["${env.SSH_CREDENTIALS_ID}"]) {
-                        sh """
-                        ssh -o StrictHostKeyChecking=no ${env.REMOTE_USER}@${env.REMOTE_HOST} "
-                        curl http://localhost:3000
-                        "
-                        """
+                    docker logs netflix-app-container
+                    EOF
+                    """
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sshagent (credentials: ['your-ssh-credentials-id']) {
+                    script {
+                        def appRunning = sh(
+                            script: """
+                            ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} << EOF
+                            curl -s -o /dev/null -w "%{http_code}" http://localhost:3000
+                            EOF
+                            """,
+                            returnStdout: true
+                        ).trim()
+                        if (appRunning != '200') {
+                            error("Application is not running or failed to start.")
+                        }
                     }
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
         }
     }
 }
