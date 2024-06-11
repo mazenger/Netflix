@@ -18,7 +18,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    docker.build("mazaconda/netflix-app:latest")
+                    def app = docker.build("mazaconda/netflix-app:latest")
                 }
             }
         }
@@ -27,7 +27,6 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', 'DOCKERHUB_CREDENTIALS') {
-                        // Dummy command to ensure login
                         sh 'echo "Logged in to Docker Hub"'
                     }
                 }
