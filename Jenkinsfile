@@ -3,9 +3,9 @@ pipeline {
 
     environment {
         DOCKERHUB_CREDENTIALS = credentials('dockerhub-credentials-id')
-        REMOTE_HOST = 'your-remote-host'
-        REMOTE_USER = 'your-remote-user'
-        REMOTE_KEY = 'your-ssh-key-path'
+        REMOTE_HOST = '18.171.149.13'
+        REMOTE_USER = 'ec2-user'
+        REMOTE_KEY = 'ec2-user1'
     }
 
     stages {
