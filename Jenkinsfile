@@ -27,7 +27,7 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', 'DOCKERHUB_CREDENTIALS') {
-                        sh 'echo "Logged in to Docker Hub"'
+                        echo 'Logged in to Docker Hub'
                     }
                 }
             }
@@ -46,7 +46,7 @@ pipeline {
         stage('Deploy to Remote Host') {
             steps {
                 sshagent (credentials: ['your-ssh-credentials-id']) {
-                    sh """
+                    sh '''
                     ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} << EOF
                     docker pull mazaconda/netflix-app:latest
                     docker stop netflix-app-container || true
@@ -55,7 +55,7 @@ pipeline {
                     sleep 10
                     docker logs netflix-app-container
                     EOF
-                    """
+                    '''
                 }
             }
         }
@@ -65,11 +65,11 @@ pipeline {
                 sshagent (credentials: ['your-ssh-credentials-id']) {
                     script {
                         def appRunning = sh(
-                            script: """
+                            script: '''
                             ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} << EOF
                             curl -s -o /dev/null -w "%{http_code}" http://localhost:3000
                             EOF
-                            """,
+                            ''',
                             returnStdout: true
                         ).trim()
                         if (appRunning != '200') {
@@ -78,6 +78,19 @@ pipeline {
                     }
                 }
             }
+        }
+    }
+
+    post {
+        always {
+            echo 'Cleaning up...'
+            sh 'docker system prune -f'
+        }
+        success {
+            echo 'Pipeline succeeded!'
+        }
+        failure {
+            echo 'Pipeline failed!'
         }
     }
 }
