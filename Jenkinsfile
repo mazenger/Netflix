@@ -23,6 +23,17 @@ pipeline {
             }
         }
 
+        stage('Login to Docker Hub') {
+            steps {
+                script {
+                    docker.withRegistry('https://index.docker.io/v1/', 'DOCKERHUB_CREDENTIALS') {
+                        // Dummy command to ensure login
+                        sh 'echo "Logged in to Docker Hub"'
+                    }
+                }
+            }
+        }
+
         stage('Push Docker Image') {
             steps {
                 script {
@@ -73,7 +84,9 @@ pipeline {
 
     post {
         always {
-            cleanWs()
+            node {
+                cleanWs()
+            }
         }
     }
 }
