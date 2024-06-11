@@ -56,4 +56,29 @@ pipeline {
                     sleep 10
                     docker logs netflix-app-container
                     EOF
-                 
+                    """
+                }
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sshagent (credentials: ['your-ssh-credentials-id']) {
+                    script {
+                        def appRunning = sh(
+                            script: """
+                            ssh -o StrictHostKeyChecking=no ${REMOTE_USER}@${REMOTE_HOST} << EOF
+                            curl -s -o /dev/null -w "%{http_code}" http://localhost:3000
+                            EOF
+                            """,
+                            returnStdout: true
+                        ).trim()
+                        if (appRunning != '200') {
+                            error("Application is not running or failed to start.")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
